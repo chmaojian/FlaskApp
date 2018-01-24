@@ -1,0 +1,60 @@
+html, body {
+    height: 100%;
+}
+
+* {
+    margin: 0;
+}
+
+body #app {
+    height: calc(100% - 76px) /*60+16*/
+}
+
+#app .layout-content, #app .layout-content-main {
+    height: 100%;
+}
+
+.bkg-headerbar {
+    height: 60px;
+    padding-top: 16px;
+    box-shadow: 0 6px 19px 0 rgba(0, 0, 0, 0.1);
+}
+
+.bkg-headerbar .bkg-search {
+    text-align: center;
+}
+
+.bkg-search input {
+    width: 250px;
+    height: 36px;
+    padding-left: 10px;
+    outline: none;
+    font-size: 14px;
+    line-height: 28px;
+    border: 1px solid #3385ff;
+    background-color: #fff;
+}
+
+.bkg-search .count {
+    width: 130px;
+    height: 36px;
+    margin-left: 30px;
+    font-size: 12px;
+    border: 1px solid #3385ff;
+}
+
+[placeholder] {
+    font-family: arial, 'Hiragino Sans GB', 'Microsoft Yahei', '微软雅黑', '宋体', Tahoma, Arial, Helvetica, STHeiti;
+}
+
+/**cytoscape
+created by chugenshen(gensenshenchu@gmail.com) on 2017/11/12*/
+#cy {
+    width: calc(100% - 60px);
+    height: 100%;
+    display: block;
+}
+
+#cy .loading_hint {
+    text-align: center;
+}
