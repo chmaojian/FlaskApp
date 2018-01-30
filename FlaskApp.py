@@ -2,6 +2,7 @@ from flask import Flask
 from flask import request
 from flask import Response
 from flask import render_template
+from py2neo import DBMS, Graph
 
 app = Flask(__name__)
 
@@ -47,6 +48,18 @@ def search_json():
                 ]}
           '''
     resp = Response(response=response_json, status=200, mimetype="application/json")
+    return resp
+
+
+@app.route('/query')
+def query():
+    # my_dbms = DBMS("'http://localhost:11002")
+    # graph = my_dbms.graph
+    graph = Graph(host="localhost", http_port=11001,bolt_port=11002,user='neo4j', password="neo4j")
+    graph.data("MATCH (a:Person) RETURN a.name, a.born LIMIT 4")
+    query_result = '{}'
+    print(query_result)
+    resp = Response(response=query_result, status=200, mimetype="application/json")
     return resp
 
 
