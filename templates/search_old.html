@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport"
+          content="user-scalable=no, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, minimal-ui">
+    <title>Search Result</title>
+    <link rel="stylesheet" type="text/css" href="/static/css/search.css"/>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/qtip2/2.2.0/jquery.qtip.min.css" rel="stylesheet"
+          type="text/css"/>
+</head>
+<body>
+<header>
+    <div class="bkg-headerbar">
+        <div class="bkg-search">
+            <div class="bkg-search-input">
+                <form action="search" method="get">
+                    <input id="textContent" type="text" placeholder="请输入关键词 查看图谱" name="name"/>
+                    <select name="count" class="count">
+                        <option value="5">--请选择节点个数--</option>
+                        <option value="5">5</option>
+                        <option value="10">10</option>
+                        <option value="15">15</option>
+                        <option value="20">20</option>
+                        <option value="30">30</option>
+                    </select>
+                </form>
+            </div>
+        </div>
+    </div>
+</header>
+
+
+<div id="app">
+    <main-component></main-component>
+</div>
+<template id="main-component">
+    <div class="layout-content">
+        <div class="layout-content-main">
+            <div id="cy">
+                <div class="loading_hint" v-if="loading_status!=1">
+                    <span v-if="loading_status==0">正在加载</span>
+                    <span v-if="loading_status==-1">加载失败,请刷新重试.</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</template>
+<script type="text/javascript" src="https://unpkg.com/vue@2.5.13/dist/vue.min.js"></script>
+<script type="text/javascript" src="https://unpkg.com/axios@0.17.1/dist/axios.min.js"></script>
+
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.2.5/cytoscape.min.js"></script>
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/qtip2/2.2.0/jquery.qtip.min.js"></script>
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/cytoscape-qtip@2.7.1/cytoscape-qtip.min.js"></script>
+<script>
+    function getParameterByName(name, url) {
+        if (!url) url = window.location.href;
+        name = name.replace(/[\[\]]/g, "\\$&");
+        var regex = new RegExp("[?&]" + name + "(=([^&#]*)|&|#|$)"),
+            results = regex.exec(url);
+        if (!results) return null;
+        if (!results[2]) return '';
+        return decodeURIComponent(results[2].replace(/\+/g, " "));
+    }
+</script>
+<script>
+    Vue.component('main-component', {
+        template: '#main-component',
+        data: function () {
+            return {visible: false, cy: null, loading_status: 0}
+        },
+        methods: {
+            fetchNodesAndEdges: function () {
+                var self = this;
+                this.loading_status = 0;
+                axios.get('/search/graph?name=' + getParameterByName("name"))
+                    .then(function (response) {
+                        try {
+                            const nodes = response.data.nodes; //make sure it exits.
+                            const edges = response.data.edges;
+                            nodes.forEach(function (ele) {
+                                if (!ele.title) {
+                                    ele.title = ele.content.length >= 5 ? ele.content.substring(0, 5) + "…" : ele.content;
+                                }
+                                if (ele.id === "main") { //for central node.
+                                    cy.add({group: "nodes", data: ele, classes: 'main_node'});
+                                } else {
+                                    cy.add({group: "nodes", data: ele});
+                                }
+                            });
+                            edges.forEach(function (ele) {
+                                cy.add({group: "edges", data: ele});
+                            });
+                            //set layout.
+                            var layout = cy.layout({ //options here: http://js.cytoscape.org/#layouts/cose
+                                name: 'cose', animate: true, idealEdgeLength: function (edge) {
+                                    return 52;
+                                }
+                            });
+                            layout.run();
+                            cy.on("render",  function (event) {
+                                self.loading_status = 1; // finish load.
+                                cy.removeListener("render");
+                            });
+                            self.bindEvent(nodes);
+                            // cy.center();
+                        } catch (err) { //todo error handle.
+                            console.log(err);
+                            self.loading_status = -1;
+                        }
+                    })
+                    .catch(function (err) { //todo error handle.
+                        console.log(err);
+                        self.loading_status = -1;
+                    });
+            },
+            bindEvent: function (nodes) {
+                nodes.forEach(function (ele) {
+                    // you can use qtip's regular options
+                    // see http://qtip2.com/
+                    cy.$('#' + ele.id).qtip({
+                        content: ele.content,
+                        position: {
+                            my: 'top center',
+                            at: 'bottom center'
+                        },
+                        style: {
+                            classes: 'qtip-bootstrap',
+                            tip: {
+                                width: 0.4,
+                                height: 16
+                            }
+                        }
+                    });
+                });
+//                var self = this;
+//                cy.on('tapdragover', 'node', function (evt) {
+//                    var node = evt.target;
+//                    console.log(evt);
+//                     //show tooltip
+//                });
+//                cy.on('tapdragout', 'node', function (evt) {
+//                    var node = evt.target;
+//                   //hide tooltip
+//                });
+            }
+        },
+
+        mounted: function () {
+            cy = cytoscape({
+                container: document.getElementById('cy'), // container to render in
+                elements: [ // list of graph elements to start with
+                ],
+                style: [ // the stylesheet for the graph
+                    {
+                        selector: 'node',
+                        style: {
+                            "shape": "ellipse",  //or: triangle octagon rectangle
+                            "width": "mapData(importance,1, 5, 16, 32)", //about mapData: see: http://js.cytoscape.org/#style/mappers
+                            "height": "mapData(importance, 1, 5, 16, 32)",
+                            'content': 'data(title)',
+                            'background-color': '#9e9e9e',
+                            'font-size': '2',
+                            'color': 'white',
+                            'text-outline-width': 2,
+                            'text-outline-color': '#888'
+                        }
+                    },
+                    {
+                        selector: 'edge',
+                        style: {
+                            'curve-style': 'bezier',
+                            'opacity': 0.85,
+                            'width': 'mapData(strength, 70, 100, 2, 6)',
+                            'line-color': 'data(fave_color)',
+                            'target-arrow-shape': 'triangle',
+                            'source-arrow-color': 'data(fave_color)',
+                            'target-arrow-color': 'data(fave_color)',
+                            'label': 'data(label)',
+                            "edge-text-rotation": "autorotate",
+                            'font-size': '0.40em'
+                        }
+                    }, {   //for main node(中心结点)
+                        selector: 'node.main_node',
+                        css: {
+                            "shape": "octagon",
+                            'text-valign': 'center',
+                            "text-halign": "center"
+                        }
+                    },
+                    {
+                        selector: 'node[importance = 6]',
+                        css: {'background-color': '#FF6600'}
+                    },
+                    {
+                        selector: 'node[importance = 5]',
+                        css: {'background-color': '#2E8B57'}
+                    },
+                    {
+                        selector: 'node[importance = 7]',
+                        css: {'background-color': '#ff5000'}//中心节点
+                    },
+                    {
+                        selector: 'node[importance = 4]',
+                        css: {'background-color': '#8FBC8B'}//相似矿右
+                    },
+                    {
+                        selector: 'node[importance = 3]',
+                        css: {'background-color': '#FFCC00'}
+                    },
+                    {
+                        selector: 'node[importance = 2]',
+                        css: {'background-color': '#FFCC00'}
+                    },
+                    {
+                        selector: 'node[importance = 1]',
+                        css: {'background-color': '#FFCC00'}
+                    }
+                ]
+            });
+            //get data
+            this.fetchNodesAndEdges();
+        }
+    });
+
+    new Vue({
+        el: '#app'
+    });
+
+</script>
+</body>
+</html>

@@ -1,14 +1,10 @@
 from py2neo import Graph,Node,Relationship
-from pandas import DataFrame
-import json
-from py2neo.ogm import GraphObject,Property,RelatedTo,RelatedFrom
-from neo4j import GraphDatabase
 
 graph = Graph(host="localhost", http_port=7474, bolt_port=7687, user='neo4j', password="123456")
+
 li = graph.data('''start n = node(*) match (n)-[]->(m) return m,n''')
 # df = DataFrame(li)
 print(li)
-
 
 
 # node = graph.find(label='Att')
